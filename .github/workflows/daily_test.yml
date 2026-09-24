@@ -1,0 +1,29 @@
+name: Daily Selenium Test
+
+on:
+  schedule:
+    # Запускать каждый день в 03:00 UTC (06:00 МСК)
+    # Важно: GitHub Actions использует время UTC.
+    - cron: '0 3 * * *'
+  # Эта строчка позволит запустить тест вручную кнопкой в интерфейсе GitHub
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Укажите вашу версию
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          pytest tests/test_new_buildings.py -v
