@@ -1,7 +1,6 @@
+# conftest.py
 import os
-import pytest
 from selenium import webdriver
-
 
 @pytest.fixture
 def driver():
@@ -9,17 +8,17 @@ def driver():
     options.add_argument("--start-maximized")
     options.add_argument("--disable-blink-features=AutomationControlled")
 
-    if os.environ.get("GITHUB_ACTIONS"):
+    # Включаем headless в любой CI-среде (GitHub Actions, CircleCI и т.д.)
+    if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS") or os.environ.get("CIRCLECI"):
         options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--window-size=1920,1080")
+        options.add_argument("--lang=ru-RU")
 
     driver = webdriver.Chrome(options=options)
     driver.implicitly_wait(5)
-
     yield driver
-
     driver.quit()
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
