@@ -1,5 +1,6 @@
 # conftest.py
 import os
+import pytest
 from selenium import webdriver
 
 @pytest.fixture
