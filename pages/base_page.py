@@ -2,12 +2,14 @@ import allure
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from urllib.parse import parse_qs, urlparse
 
 
 class BasePage:
 
     # Тексты страницы блокировки: дом.рф отдаёт её вместо контента, если
-    # распознал автоматизированный браузер (например, запущенный в headless).
+    # распознал автоматизированный браузер (headless) ИЛИ если IP клиента
+    # относится к дата-центрам/зарубежным хостингам (антибот-защита сайта).
     ACCESS_BLOCKED_MARKERS = (
         "доступ заблокирован",
         "доступ к запрашиваемому ресурсу заблокирован",
@@ -36,15 +38,27 @@ class BasePage:
         source = (self.driver.page_source or "").lower()
         return any(marker in source for marker in self.ACCESS_BLOCKED_MARKERS)
 
+    def get_blocked_request_ip(self):
+        """IP клиента, зафиксированный антибот-системой в URL страницы блокировки."""
+        try:
+            query = urlparse(self.driver.current_url or "").query
+            return (parse_qs(query).get("request_ip") or [""])[0]
+        except Exception:  # noqa: BLE001 - диагностика не должна ломать тест
+            return ""
+
     def check_access_blocked(self):
         """Падаем с понятным сообщением, а не с «голым» TimeoutException."""
         if not self.is_access_blocked():
             return
+        request_ip = self.get_blocked_request_ip()
+        ip_hint = f", request_ip={request_ip!r}" if request_ip else ""
         raise AssertionError(
             "Сайт вернул страницу блокировки вместо контента "
-            f"(title={self.driver.title!r}, url={self.driver.current_url!r}). "
-            "дом.рф блокирует headless-браузеры. Запускайте Chrome в обычном "
-            "режиме: в CI — через xvfb-run и без переменной окружения HEADLESS."
+            f"(title={self.driver.title!r}, url={self.driver.current_url!r}{ip_hint}). "
+            "дом.рф блокирует не только headless-браузеры, но и запросы с IP "
+            "дата-центров, поэтому IP раннеров GitHub (Azure) сайт отклоняет. "
+            "Нужен российский «бытовой» IP: self-hosted раннер либо прокси "
+            "в переменной окружения SELENIUM_PROXY."
         )
 
     @allure.step("Найти элемент с ожиданием")

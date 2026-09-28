@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse
 
 import pytest
 from selenium import webdriver
@@ -13,11 +14,30 @@ from selenium import webdriver
 # он гарантированно попадает на страницу блокировки.
 IS_HEADLESS = os.environ.get("HEADLESS", "").strip().lower() in {"1", "true", "yes", "on"}
 WINDOW_SIZE = os.environ.get("BROWSER_WINDOW_SIZE", "1920,1080")
-# Необязательный прокси (например, если сайт блокирует IP раннера):
-# SELENIUM_PROXY=http://host:port
-# ВНИМАНИЕ: Chrome игнорирует логин/пароль в --proxy-server, поэтому для прокси
-# с авторизацией нужен отдельный механизм (например, расширение с авторизацией).
-PROXY = os.environ.get("SELENIUM_PROXY", "").strip()
+
+
+def _parse_proxy(raw):
+    """Разбирает SELENIUM_PROXY и возвращает (host:port, логин).
+
+    Chrome не поддерживает авторизацию в --proxy-server, поэтому логин/пароль
+    отбрасываются: доступ на прокси нужно разрешать по IP клиента (IP-allowlist).
+    """
+    raw = (raw or "").strip()
+    if not raw:
+        return "", ""
+    parsed = urlparse(raw if "://" in raw else f"http://{raw}")
+    host_port = parsed.netloc.rsplit("@", 1)[-1]
+    return host_port, (parsed.username or "")
+
+
+# Необязательный прокси (если сайт блокирует IP раннера, например GitHub Actions):
+# SELENIUM_PROXY=host:port
+PROXY, PROXY_LOGIN = _parse_proxy(os.environ.get("SELENIUM_PROXY", ""))
+if PROXY_LOGIN and PROXY:
+    print(
+        "ВНИМАНИЕ: логин/пароль из SELENIUM_PROXY игнорируются — Chrome не "
+        "поддерживает авторизацию в --proxy-server. Разрешите доступ по IP."
+    )
 ARTIFACTS_DIR = "artifacts"
 
 
