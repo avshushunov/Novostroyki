@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 allure_results/
+artifacts/
 .venv/
 venv/
 .idea/

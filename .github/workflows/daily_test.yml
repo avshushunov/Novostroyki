@@ -24,14 +24,25 @@ jobs:
         run: |
           pip install -r requirements.txt
 
+      - name: Install xvfb (виртуальный дисплей для обычного Chrome)
+        # дом.рф блокирует headless-браузеры, поэтому Chrome запускается в обычном
+        # режиме на виртуальном дисплее Xvfb
+        run: |
+          if ! command -v xvfb-run >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq xvfb
+          fi
+
       - name: Run tests
         run: |
-          pytest tests/test_new_buildings.py -v
+          xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pytest tests/test_new_buildings.py -v
 
-      - name: Upload screenshot on failure
+      - name: Upload artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          name: failure-screenshots
-          path: failure_*.png
+          name: failure-artifacts
+          path: |
+            artifacts/
+            failure_*.png
           if-no-files-found: ignore
